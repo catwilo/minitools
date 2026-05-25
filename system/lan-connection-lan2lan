@@ -1,0 +1,8 @@
+#!/bin/bash
+
+IF="enp3s0"
+IP="1.2.3.1/24"
+
+ip link show "$IF" > /dev/null 2>&1 || { IF="enp4s0"; IP="1.2.3.2/24"; }
+
+sudo ip addr replace $IP dev $IF && sudo ip link set $IF up

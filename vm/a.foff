@@ -1,0 +1,12 @@
+#!/bin/bash
+set -euo pipefail
+
+state=$(virsh --connect qemu:///system domstate appen-vm 2>/dev/null || true)
+
+if [[ "$state" == "running" ]]; then
+  echo "Forzando apagado de VM appen-vm..."
+  virsh --connect qemu:///system destroy appen-vm
+  echo "VM appen-vm apagada por fuerza."
+else
+  echo "VM appen-vm ya está apagada."
+fi

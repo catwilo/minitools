@@ -1,0 +1,24 @@
+#!/bin/bash
+
+ICON_DIR="$HOME/icos"
+IDFILE="/tmp/mic_notify_id"
+
+pactl set-source-mute @DEFAULT_SOURCE@ toggle
+status=$(pactl get-source-mute @DEFAULT_SOURCE@ | awk '{print $2}')
+
+if [ "$status" = "yes" ]; then
+    icon="mic-mute.svg"
+    msg="Muted"
+else
+    icon="mic-on.svg"
+    msg="Unmuted"
+fi
+
+prev=0
+[ -f "$IDFILE" ] && prev=$(cat "$IDFILE")
+
+body="<img src=\"$ICON_DIR/$icon\"/><br/>$msg"
+
+newid=$(notify-send -a "" -r "$prev" "Micrófono" "$body" 2>/dev/null)
+
+[ -n "$newid" ] && echo "$newid" > "$IDFILE"

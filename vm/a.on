@@ -1,0 +1,16 @@
+#!/bin/bash
+set -euo pipefail
+
+state=$(virsh --connect qemu:///system domstate appen-vm 2>/dev/null || true)
+if [[ "$state" != "running" ]]; then
+  echo "Iniciando VM appen-vm..."
+  virsh --connect qemu:///system start appen-vm
+else
+  echo "VM appen-vm ya está en ejecución."
+fi
+
+echo "Abriendo visor Spice..."
+exec virt-viewer --connect qemu:///system appen-vm &
+
+#echo "Ejecutando virt-manager..."
+#exec virt-manager

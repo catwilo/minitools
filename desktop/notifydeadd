@@ -1,0 +1,21 @@
+#!/bin/bash
+if [[ $# -eq 0 ]]; then
+  echo "Uso: $(basename "$0") [-i icono.svg | -I /ruta/icono.svg] [-t tiempo_ms] 'Título' 'Mensaje'"
+  exit 1
+fi
+
+ico=""
+time=2000
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -i) ico="/home/u/icos/$2"; shift 2 ;;
+    -I) ico="$2"; shift 2 ;;
+    -t) time="$2"; shift 2 ;;
+    *) break ;;
+  esac
+done
+
+[[ -n "$ico" && ! -f "$ico" ]] && { echo "Error: icono no encontrado en $ico"; exit 1; }
+
+notify-send -a "..." -t "$time" "$1" "<img src=\"$ico\"/><br>${2:-}"
+

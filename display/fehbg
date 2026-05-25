@@ -1,0 +1,4 @@
+#!/bin/sh
+# feh --no-fehbg --bg-max '/home/u/background/background' '/home/u/background/1576273789594.jpg' '/home/u/background/1604107202840.png' '/home/u/background/1577670245961.jpg' 
+
+feh --no-fehbg --bg-scale '/home/u/background/background' '/home/u/background/1' '/home/u/background/2' '/home/u/background/9' 

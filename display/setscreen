@@ -1,0 +1,4 @@
+#!/bin/bash
+xrandr --newmode "1366x768_60.00" 85.25 1366 1436 1579 1792 768 771 774 798 -hsync +vsync
+xrandr --addmode DP-2 "1366x768_60.00"
+xrandr --output DP-2 --mode "1366x768_60.00"

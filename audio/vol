@@ -1,0 +1,44 @@
+#!/bin/sh
+ICON_DIR="$HOME/icos"
+IDFILE="/tmp/vol_notify_id"
+
+if [ $# -ne 1 ]; then 
+    echo "Uso: $0 <+5|-5|50>"
+    exit 1
+fi
+
+arg="$1"
+
+# Ajustar volumen
+if echo "$arg" | grep -qE '^[+-][0-9]+$'; then
+    pactl set-sink-volume @DEFAULT_SINK@ "$arg%" >/dev/null
+elif echo "$arg" | grep -qE '^[0-9]+$'; then
+    pactl set-sink-volume @DEFAULT_SINK@ "$arg%" >/dev/null
+fi
+
+# Obtener volumen actual
+vol=$(pactl get-sink-volume @DEFAULT_SINK@ | awk '{print $5}' | head -n1 | tr -d '%')
+
+# Seleccionar ícono
+if [ "$vol" -le 0 ]; then 
+    icon="mute.svg"
+elif [ "$vol" -lt 30 ]; then 
+    icon="low.svg"
+elif [ "$vol" -lt 85 ]; then 
+    icon="medium.svg"
+else 
+    icon="hight.svg"
+fi
+
+# Leer ID previo
+prev=0
+[ -f "$IDFILE" ] && prev=$(cat "$IDFILE")
+
+# Enviar notificación
+body="<img src=\"$ICON_DIR/$icon\"/><br/>Nivel: ${vol}%"
+
+newid=$(notify-send -a "" -p -r "$prev" "Volumen: ${vol}%" "$body" \
+    -h string:x-canonical-private-synchronous:volume \
+    -h int:value:"$vol" 2>/dev/null)
+
+[ -n "$newid" ] && echo "$newid" > "$IDFILE"
