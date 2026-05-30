@@ -1,4 +1,13 @@
-#!/bin/sh
-# feh --no-fehbg --bg-max '/home/u/background/background' '/home/u/background/1576273789594.jpg' '/home/u/background/1604107202840.png' '/home/u/background/1577670245961.jpg' 
+#!/usr/bin/env bash
+# fehbg — set wallpaper(s) from a directory using feh
+# Usage: fehbg [dir]   default: ~/.local/share/wallpapers
+set -euo pipefail
 
-feh --no-fehbg --bg-scale '/home/u/background/background' '/home/u/background/1' '/home/u/background/2' '/home/u/background/9' 
+BG_DIR="${1:-${XDG_DATA_HOME:-$HOME/.local/share}/wallpapers}"
+[[ -d "$BG_DIR" ]] || { echo "Error: dir not found: $BG_DIR"; exit 1; }
+
+mapfile -t imgs < <(find "$BG_DIR" -maxdepth 1 -type f   \( -name "*.jpg" -o -name "*.jpeg" -o -name "*.png" \) | sort)
+[[ ${#imgs[@]} -eq 0 ]] && { echo "No images found in $BG_DIR"; exit 1; }
+
+echo "Applying ${#imgs[@]} wallpaper(s) from $BG_DIR"
+feh --no-fehbg --bg-scale "${imgs[@]}"

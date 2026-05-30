@@ -1,4 +1,19 @@
-#!/bin/bash
-xrandr --newmode "1366x768_60.00" 85.25 1366 1436 1579 1792 768 771 774 798 -hsync +vsync
-xrandr --addmode DP-2 "1366x768_60.00"
-xrandr --output DP-2 --mode "1366x768_60.00"
+#!/usr/bin/env bash
+# setscreen — add and apply a custom resolution to a connected output
+# Usage: setscreen [resolution] [refresh] [output]
+#   defaults: 1366x768  60  (auto-detect first connected output)
+set -euo pipefail
+
+RES="${1:-1366x768}"
+REFRESH="${2:-60}"
+OUTPUT="${3:-$(xrandr | awk '/ connected/{print $1; exit}')}"
+[[ -z "$OUTPUT" ]] && { echo "Error: no connected output detected"; exit 1; }
+
+MODE="${RES}_${REFRESH}.00"
+MODELINE=$(cvt ${RES/x/ } "$REFRESH" | awk '/Modeline/{$1=""; print $0}' | xargs)
+
+echo "Output: $OUTPUT | Mode: $MODE"
+xrandr --newmode "$MODE" $MODELINE 2>/dev/null || true
+xrandr --addmode "$OUTPUT" "$MODE"
+xrandr --output "$OUTPUT" --mode "$MODE"
+echo "Applied $MODE to $OUTPUT"
