@@ -10,7 +10,7 @@ Small standalone scripts organized by category. No installer needed — copy or 
 |---|---|
 | `toggle-mic` | Toggle microphone mute with desktop notification |
 | `toggle-vol` | Toggle volume mute with desktop notification |
-| `vol` | Set volume to a given level (requires 1 argument) |
+| `vol` | Set sink volume by absolute value or delta (e.g. 50, +5, -5); shows notification |
 
 ## desktop
 
@@ -39,7 +39,7 @@ Small standalone scripts organized by category. No installer needed — copy or 
 
 | Script | Description |
 |---|---|
-| `fixsuffix.sh` | Fix or normalize file extensions in batch |
+| `fixsuffix.sh` | Interactively remove a suffix from matching files in a directory (e.g. .bak, .~1~) |
 | `mv-depth.sh` | Rename files recursively by replacing text in paths |
 
 ## misc
@@ -55,6 +55,7 @@ Small standalone scripts organized by category. No installer needed — copy or 
 | Script | Description |
 |---|---|
 | `lan-connection-lan2lan` | Configure a LAN-to-LAN connection on a given interface |
+| `pty-run` | Run a command in a real PTY with alt-screen + clipso capture; supports pipes and shell operators |
 | `reset-iwd.service.sh` | Atomic idempotent restart of the iwd wireless daemon |
 | `rpi-optimize.sh` | Disable optional Raspberry Pi services to reduce overhead |
 | `run-java.sh` | Compile, run, and clean a single Java source file |
