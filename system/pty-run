@@ -2,68 +2,107 @@
 # pty-run -- run a command inside a real PTY with alt-screen + clipso capture.
 #
 # Standalone extraction of the pattern validated in:
-#   zsh-setup/dotfiles/.addons-zsh/aliass/bindkeys.zsh (_wrap_clipso, _clipso_clean)
-# That version only works inside an interactive zsh ($BUFFER, zle). This is the
-# same pattern usable from scripts, ssh, cron, or any non-interactive context.
+#   zsh-setup/dotfiles/.addons-zsh/aliass/bindkeys.zsh (_wrap_clipso)
+# Usable from scripts, ssh, cron, or any non-interactive context.
 #
-# USAGE:
-#   pty-run [--shell=NAME] 'cmd1 && cmd2 | cmd3'   # single string -> eval (supports && | ; etc)
-#   pty-run [--shell=NAME] cmd arg1 arg2           # multiple args -> run directly (no eval, safer)
+# USAGE (three modes, pick by what avoids quoting):
+#   pty-run 'cmd1 && cmd2'         single string -> eval (supports && | ; etc)
+#   pty-run cmd arg1 arg2          argv form -> run directly (no eval)
+#   pty-run < script.sh            stdin -> command read from stdin/heredoc
+#   pty-run --stdin << 'EOF'       explicit stdin (cero quoting, any inner quotes)
+#     { cmd1; cmd2 | grep "x"; }
+#   EOF
 #
-# --shell=NAME picks which shell interprets the command string (bash, zsh, sh, ...).
-# Default (no flag): $SHELL, same as plain `script -c` -- matches the user's
-# actual interactive shell. Pass --shell explicitly whenever the command uses
-# shell-specific syntax (e.g. bash's `read -p` vs zsh's `read 'var?prompt'`)
-# so behavior is deterministic instead of guessed from the command's content.
+# STDIN MODE is the most robust: the command body is written verbatim to a
+# temp script (no re-quoting, so inner quotes of any kind work) and executed
+# in the PTY. A trap guarantees temp cleanup on any exit path (success, error,
+# interrupt) -- the enterprise-standard pattern for transient resources.
 #
-# WHY TWO INVOCATION MODES: same dual-mode contract as the now-removed lipso()
-# helper (zsh-setup commit 5fcef68) -- one string when you need shell operators,
-# argv form when you don't and want to avoid eval entirely.
+# --shell=NAME picks the interpreter (bash, zsh, sh). Default: $SHELL.
 #
 # WHAT IT DOES:
 #   1. alt-screen on   (\033[?1049h) so live output doesn't pollute scrollback
-#   2. run the command inside a real PTY via `<shell> -c "<cmd>"` wrapped in
-#      `script -q -e -O <log> -c "..."` (-q = no banner noise, -e = propagate
-#      the child's real exit code)
+#   2. run command inside a real PTY via script(1) (-q quiet, -e propagate exit)
 #   3. alt-screen off  (\033[?1049l)
 #   4. strip script(1) banners + ANSI + CR from the captured log
-#   5. clipso <log>    -- show clean output and copy it to clipboard
+#   5. clipso <log>    -- show clean output and copy to clipboard
 #
 # EXIT CODE: propagates the wrapped command's real exit code (via script -e).
 set -u
 
 _shell="${SHELL:-/bin/sh}"
-case "${1:-}" in
-  --shell=*) _shell="${1#--shell=}"; shift ;;
-esac
+_stdin_mode=0
 
-if [ "$#" -eq 0 ]; then
-  echo "usage: pty-run [--shell=NAME] 'cmd1 && cmd2' | pty-run [--shell=NAME] cmd arg1 arg2" >&2
-  exit 1
-fi
+while [ "$#" -gt 0 ]; do
+  case "${1:-}" in
+    --shell=*) _shell="${1#--shell=}"; shift ;;
+    --stdin)   _stdin_mode=1; shift ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
 
 command -v "$_shell" >/dev/null 2>&1 || { echo "pty-run: shell not found: $_shell" >&2; exit 1; }
 
-if [ "$#" -eq 1 ]; then
-  _cmd=$1
+# ── Resource setup with guaranteed cleanup (trap covers all exit paths) ──────
+_log=""
+_cmdfile=""
+_cleanup() {
+  [ -n "$_log" ] && rm -f "$_log"
+  [ -n "$_cmdfile" ] && rm -f "$_cmdfile"
+}
+trap _cleanup EXIT INT TERM HUP
+
+_log=$(mktemp "${TMPDIR:-/tmp}/pty-run.log.XXXXXX")
+
+# ── Determine command source (stdin / argv / single-string) ─────────────────
+# Auto-enable stdin mode when no args remain AND stdin is not a tty.
+if [ "$_stdin_mode" -eq 0 ] && [ "$#" -eq 0 ]; then
+  if [ ! -t 0 ]; then
+    _stdin_mode=1
+  else
+    echo "usage: pty-run [--shell=NAME] 'cmd'  |  pty-run cmd args  |  pty-run --stdin << 'EOF'" >&2
+    exit 1
+  fi
+fi
+
+if [ "$_stdin_mode" -eq 1 ]; then
+  # STDIN MODE: write command body verbatim to a temp script (no re-quoting).
+  # Any inner quotes (single, double, nested) survive because nothing parses
+  # the body as a shell string -- it is executed as a file.
+  _cmdfile=$(mktemp "${TMPDIR:-/tmp}/pty-run.cmd.XXXXXX")
+  cat > "$_cmdfile"
+  _inner="$_shell $_cmdfile"
+elif [ "$#" -eq 1 ]; then
+  # SINGLE-STRING MODE: eval via shell -c (supports && | ; operators).
+  _cmdfile=$(mktemp "${TMPDIR:-/tmp}/pty-run.cmd.XXXXXX")
+  printf '%s\n' "$1" > "$_cmdfile"
+  _inner="$_shell $_cmdfile"
 else
-  _cmd=$(printf '%q ' "$@")
+  # ARGV MODE: write a script that execs argv verbatim (no eval, no quoting).
+  _cmdfile=$(mktemp "${TMPDIR:-/tmp}/pty-run.cmd.XXXXXX")
+  {
+    printf '#!/usr/bin/env %s\n' "$_shell"
+    printf 'exec'
+    for _a in "$@"; do
+      printf ' %q' "$_a"
+    done
+    printf '\n'
+  } > "$_cmdfile"
+  _inner="$_shell $_cmdfile"
 fi
 
 _clean_pty_log() {   # $1 = logfile, normalize script(1) output in place
   sed -i '1{/^Script started/d}; ${/^Script done/d}; s/\x1b\[[0-9;]*[mGKHFABCDJsu]//g; s/\x1b\[?[0-9;]*[hl]//g; s/\r//g' "$1"
 }
 
-_log=$(mktemp "${TMPDIR:-/tmp}/pty-run.XXXXXX")
-
+# ── Run inside PTY with alt-screen ──────────────────────────────────────────
 printf '\033[?1049h\033[2J\033[H'
-_cmd_q=$(printf '%s' "$_cmd" | sed "s/'/'\\\\''/g")
-_inner="$_shell -c '$_cmd_q'"
-COLUMNS=$(tput cols) LINES=$(tput lines) script -q -e -O "$_log" -c "$_inner"
+COLUMNS=$(tput cols 2>/dev/null || echo 80) LINES=$(tput lines 2>/dev/null || echo 24) \
+  script -q -e -O "$_log" -c "$_inner"
 _status=$?
 printf '\033[?1049l'
 
 _clean_pty_log "$_log"
 clipso "$_log"
-rm -f "$_log"
 exit "$_status"
