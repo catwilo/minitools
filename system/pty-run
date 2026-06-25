@@ -48,12 +48,19 @@ command -v "$_shell" >/dev/null 2>&1 || { echo "pty-run: shell not found: $_shel
 _log=""
 _cmdfile=""
 _cleanup() {
-  [ -n "$_log" ] && rm -f "$_log"
   [ -n "$_cmdfile" ] && rm -f "$_cmdfile"
+  # _log is NOT cleaned here -- consumer (clipso or other) is responsible
 }
 trap _cleanup EXIT INT TERM HUP
 
-_log=$(mktemp "${TMPDIR:-/tmp}/pty-run.log.XXXXXX")
+_log_dir="${XDG_CACHE_HOME:-$HOME/.cache}/pty-run"
+mkdir -p "$_log_dir"
+_log="$_log_dir/last.log"
+if [ -f "$_log" ]; then
+  echo "pty-run: ERROR: $_log already exists -- previous consumer did not clean up" >&2
+  echo "pty-run: remove it manually or let the consumer clean it, then retry" >&2
+  exit 1
+fi
 
 # ── Determine command source (stdin / argv / single-string) ─────────────────
 # Auto-enable stdin mode when no args remain AND stdin is not a tty.
@@ -104,5 +111,5 @@ _status=$?
 printf '\033[?1049l'
 
 _clean_pty_log "$_log"
-clipso "$_log"
+# log is now at $_log -- consumer must read and clean it
 exit "$_status"
