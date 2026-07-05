@@ -19,7 +19,7 @@ if (-not (Get-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -ErrorAction Silentl
 
 $tailscale = Join-Path $env:ProgramFiles 'Tailscale\tailscale.exe'
 
-& $tailscale up
+& $tailscale up --unattended --accept-dns=false --auto-update=false
 & $tailscale status
 & $tailscale ip -4
 
