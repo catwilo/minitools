@@ -60,6 +60,7 @@ Small standalone scripts organized by category. No installer needed — copy or 
 | `rpi-optimize.sh` | Disable optional Raspberry Pi services to reduce overhead |
 | `run-java.sh` | Compile, run, and clean a single Java source file |
 | `setup-mpd-termux.sh` | Set up MPD (Music Player Daemon) in Termux |
+| `win-node-bootstrap.ps1` | One-time bootstrap: OpenSSH Server + Tailscale on a new Windows host node |
 
 ## vm
 
