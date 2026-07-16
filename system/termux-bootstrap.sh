@@ -40,6 +40,7 @@ DRY_RUN=0
 EXIT_CODE=0
 declare -a _CLEANUP_TMPFILES=()
 
+
 # ----------------------------------------------------------------------------
 # LOGGING
 # ----------------------------------------------------------------------------
@@ -53,21 +54,17 @@ fi
 
 mkdir -p "$LOG_DIR" 2>/dev/null || true
 
-_log() {
-    local level="$1"; shift
-    local ts; ts="$(date '+%Y-%m-%d %H:%M:%S')"
-    local line="[$ts] [$level] $*"
-    echo "$line" >&2
-    [[ $SKIP_LOG -eq 0 ]] && echo "$line" >> "$LOG_FILE" 2>/dev/null
+# Plain (no color codes) copy of a line, written to the log file only.
+_log_plain() {
+    [[ $SKIP_LOG -eq 0 ]] && echo "$*" >> "$LOG_FILE" 2>/dev/null
 }
 
-ok()   { _log OK    "${G}[OK]${Z} $*"; }
-warn() { _log WARN  "${Y}[WARN]${Z} $*"; }
-err()  { _log ERROR "${R}[ERROR]${Z} $*"; }
-info() { _log INFO  "${C}[INFO]${Z} $*"; }
-step() { _log STEP  "${B}== $* ==${Z}"; echo "" >&2; }
+ok()   { printf '%s[OK]%s   %s\n'   "$G" "$Z" "$*" >&2; _log_plain "[OK]   $*"; }
+warn() { printf '%s[WARN]%s %s\n'  "$Y" "$Z" "$*" >&2; _log_plain "[WARN] $*"; }
+err()  { printf '%s[ERR]%s  %s\n'  "$R" "$Z" "$*" >&2; _log_plain "[ERR]  $*"; }
+info() { printf '%s[INFO]%s %s\n'  "$C" "$Z" "$*" >&2; _log_plain "[INFO] $*"; }
+step() { printf '\n%s== %s ==%s\n' "$B" "$*" "$Z" >&2; _log_plain ""; _log_plain "== $* =="; }
 die()  { err "$*"; exit 1; }
-
 # ----------------------------------------------------------------------------
 # CLEANUP
 # ----------------------------------------------------------------------------
@@ -84,16 +81,20 @@ trap _cleanup EXIT
 # UTILITIES
 # ----------------------------------------------------------------------------
 
-# Run a command directly (no eval). Dry-run prints and returns 0.
+# Run a command with stdout/stderr silenced (e.g. apt/pkg
+# noise). Dry-run prints and returns 0 without executing.
 _run() {
     if [[ $DRY_RUN -eq 1 ]]; then
         info "[DRY-RUN] $*"
         return 0
     fi
-    "$@"
+    "$@" >/dev/null 2>&1
+    local rc=$?
+    return $rc
 }
 
-# Run a command, capturing stderr for diagnosis instead of silently discarding it.
+# Run a command, capturing stderr for diagnosis on
+# failure instead of silently discarding it.
 _run_capture() {
     local errfile; errfile="$(mktemp "${TMPDIR:-/tmp}/berr.XXXXXX")"
     _CLEANUP_TMPFILES+=("$errfile")
@@ -119,7 +120,6 @@ _verify_binary() {
     err "binary not found: $1"; return 1
 }
 
-# Clone or update a git repo. Distinguishes network failure from up-to-date.
 _git_sync() {
     local name="$1" url="$2" path="${3:-$TOOLS_DIR/$1}"
 
@@ -267,6 +267,90 @@ phase_9_audit_privacy() {
 }
 
 # ----------------------------------------------------------------------------
+# PHASE 10: TERMUX COMPANION TOOLS
+# ----------------------------------------------------------------------------
+# Installs the Termux-side counterparts of companion apps the user already
+# has installed from F-Droid (Termux:API, Termux:Boot, Termux:X11). These
+# apps are Android APKs and cannot be installed by this script -- only their
+# Termux package/binary counterparts can. If an app's Termux side responds,
+# we assume the APK is present and working; if not, we tell the user what
+# manual step (usually: open the app once) is still needed.
+
+phase_10_termux_companions() {
+    step "PHASE 10: Termux companion tools"
+
+    # --- termux-gui-package: lets scripts show images/dialogs from the CLI ---
+    info "installing termux-gui-package (console image viewer, dialogs)"
+    if _run pkg install -y termux-gui-package; then
+        _verify_binary termux-gui-view || warn "termux-gui-view not found after install"
+    else
+        warn "termux-gui-package install failed, continuing"
+    fi
+
+    # --- Termux:X11 companion package ---
+    # termux-x11-nightly lives in a separate repo (x11-repo) that Termux does
+    # NOT enable by default -- installing it directly without enabling the
+    # repo first fails with "unable to locate package".
+    info "enabling x11-repo and installing termux-x11-nightly"
+    if _run pkg install -y x11-repo && _run pkg install -y termux-x11-nightly; then
+        _verify_binary termux-x11 || warn "termux-x11 not found after install"
+    else
+        warn "termux-x11-nightly install failed, continuing"
+    fi
+
+    # --- Termux:API verification (package already in BASE_PACKAGES) ---
+    # Termux:API is a two-part system: the termux-api PACKAGE (already
+    # installed in Phase 0) and the Termux:API APP (a separate APK). The
+    # package alone does nothing if the app isn't installed and running, so
+    # we verify with a real call instead of just checking the binary exists.
+    info "verifying Termux:API app responds"
+    if _run_capture termux-battery-status; then
+        ok "Termux:API app responding"
+    else
+        warn "Termux:API app not responding -- confirm the Termux:API app (APK) is installed"
+    fi
+
+    # --- Termux:Boot: create ~/.termux/boot/start-sshd (idempotent) ---
+    # Termux:Boot is a separate APK that must be opened by the user at least
+    # once to register as a boot receiver with Android -- this script cannot
+    # do that tap for you. What it CAN do is prepare the boot script so that,
+    # once the app is registered, sshd starts automatically on every reboot.
+    local boot_dir="$HOME/.termux/boot"
+    local boot_script="$boot_dir/start-sshd"
+    if [[ $DRY_RUN -eq 1 ]]; then
+        info "[DRY-RUN] would create/verify $boot_script"
+    else
+        mkdir -p "$boot_dir"
+        if [[ -f "$boot_script" ]] && grep -q "^sshd$" "$boot_script" 2>/dev/null; then
+            info "boot script already present: $boot_script"
+        else
+            local tmp_boot
+            tmp_boot="$(mktemp "${TMPDIR:-/tmp}/start-sshd.XXXXXX")"
+            cat > "$tmp_boot" << 'BOOTSCRIPT'
+#!/data/data/com.termux/files/usr/bin/sh
+# ~/.termux/boot/start-sshd
+# Runs automatically when Termux:Boot detects Android finished booting.
+# termux-wake-lock first, so Android doesn't kill sshd by sleeping the device.
+termux-wake-lock
+sshd
+BOOTSCRIPT
+            if command -v mkit >/dev/null 2>&1; then
+                mkit write "$boot_script" "$tmp_boot" >/dev/null 2>&1
+            else
+                cp -f "$tmp_boot" "$boot_script"
+            fi
+            chmod +x "$boot_script"
+            rm -f "$tmp_boot"
+            ok "boot script created: $boot_script"
+        fi
+    fi
+    warn "Termux:Boot must be opened manually once for Android to register it -- if you haven't, open the Termux:Boot app icon now"
+
+
+    ok "Termux companion tools ready"
+}
+
+# ----------------------------------------------------------------------------
 # FINAL STATE
 # ----------------------------------------------------------------------------
 
@@ -351,7 +435,8 @@ main() {
     phase_6_miko_task     || EXIT_CODE=1
     phase_7_noemap        || EXIT_CODE=1
     phase_8_nvim_setup    || EXIT_CODE=1
-    phase_9_audit_privacy || EXIT_CODE=1
+    phase_9_audit_privacy      || EXIT_CODE=1
+    phase_10_termux_companions || EXIT_CODE=1
     phase_final_state
 
     exit $EXIT_CODE
