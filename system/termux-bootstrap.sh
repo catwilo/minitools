@@ -237,6 +237,12 @@ phase_1_ut() {
         err "ut binary not found at $UT_ROOT/ut after clone"
         return 1
     fi
+    # ut-collect.sh is a companion script ut itself needs at runtime (used
+    # by 'ut machines diff'). It must sit next to the installed binary, not
+    # just live in the source repo.
+    if [[ -f "$UT_ROOT/ut-collect.sh" ]]; then
+        _install_atomic "$UT_ROOT/ut-collect.sh" "$LOCAL_BIN/ut-collect.sh" || return 1
+    fi
     _verify_binary ut || return 1
     _run git config --global init.templateDir "$UT_ROOT/git-templates" 2>/dev/null || true
     _run git config --global push.followTags   true
