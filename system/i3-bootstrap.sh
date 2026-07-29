@@ -19,7 +19,7 @@ set -euo pipefail
 readonly SCRIPT_VERSION="1.0.0"
 readonly SCRIPT_NAME="$(basename "$0")"
 
-readonly PACKAGES=(x11-repo termux-x11-nightly i3wm xterm dmenu i3status)
+readonly PACKAGES=(x11-repo termux-x11-nightly i3 aterm dmenu i3status)
 
 DRY_RUN=0
 
@@ -65,7 +65,7 @@ phase_1_packages() {
 phase_2_verify() {
     step "PHASE 2: verifying binaries"
     local rc=0
-    for bin in termux-x11 i3 xterm dmenu i3status; do
+    for bin in termux-x11 i3 aterm dmenu i3status; do
         _verify_binary "$bin" || rc=1
     done
     [[ $rc -eq 0 ]] || warn "one or more binaries missing -- check pkg output above"
