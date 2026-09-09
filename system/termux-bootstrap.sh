@@ -4,7 +4,7 @@
 # Bootstrap a fresh Termux node with base packages + 9 CORE applications.
 #
 # Order: [phase 0: termux base] -> ut -> clipso -> zsh-setup -> maid-chan
-#        -> mkit -> miko-task -> noemap -> nvim-setup -> audit-privacy
+#        -> mkit -> miko -> nina -> nvim-setup -> audit-privacy
 #
 # Idempotent: safe to re-run; skips already-installed phases.
 # Modular:    each phase self-contained, testable independently.
@@ -26,7 +26,7 @@ set -euo pipefail
 readonly SCRIPT_VERSION="2.0.0"
 readonly SCRIPT_NAME="$(basename "$0")"
 
-readonly UT_ROOT="${HOME}/unix-toolkit"
+readonly UT_ROOT="${TOOLS_DIR}/ut"
 readonly TOOLS_DIR="${HOME}/unix-toolkit-tools"
 readonly LOCAL_BIN="${HOME}/.local/bin"
 readonly LOG_DIR="${HOME}/.local/var/log"
@@ -228,8 +228,8 @@ _phase_repo_install() {
 }
 
 phase_1_ut() {
-    step "PHASE 1: ut (unix-toolkit)"
-    _git_sync "unix-toolkit" "https://github.com/catwilo/unix-toolkit.git" "$UT_ROOT" || return 1
+    step "PHASE 1: ut"
+    _git_sync "ut" "https://github.com/catwilo/ut.git" "$UT_ROOT" || return 1
     # ut ships its binary at repo root; install it atomically once cloned.
     if [[ -f "$UT_ROOT/ut" ]]; then
         _install_atomic "$UT_ROOT/ut" "$LOCAL_BIN/ut" || return 1
@@ -254,8 +254,8 @@ phase_2_clipso()     { _phase_repo_install "PHASE 2: clipso"     clipso     "htt
 phase_3_zsh_setup()  { _phase_repo_install "PHASE 3: zsh-setup"  zsh-setup  "https://github.com/catwilo/zsh-setup.git"  install.sh zsh; }
 phase_4_maid_chan()  { _phase_repo_install "PHASE 4: maid-chan"  maid-chan  "https://github.com/catwilo/maid-chan.git"  install.sh maid; }
 phase_5_mkit()       { _phase_repo_install "PHASE 5: mkit"       mkit       "https://github.com/catwilo/mkit.git"       install.sh mkit; }
-phase_6_miko_task()  { _phase_repo_install "PHASE 6: miko-task"  miko-task  "https://github.com/catwilo/miko-task.git"  install.sh miko; }
-phase_7_noemap()     { _phase_repo_install "PHASE 7: noemap"     noemap     "https://github.com/catwilo/noemap.git"     install.sh ndevs; }
+phase_6_miko()       { _phase_repo_install "PHASE 6: miko"       miko       "https://github.com/catwilo/miko.git"       install.sh miko; }
+phase_7_nina()       { _phase_repo_install "PHASE 7: nina"       nina       "https://github.com/catwilo/nina.git"       install.sh nina; }
 phase_8_nvim_setup() { _phase_repo_install "PHASE 8: nvim-setup" nvim-setup "https://github.com/catwilo/nvim-setup.git" install.sh nvim; }
 
 phase_9_audit_privacy() {
@@ -370,7 +370,7 @@ phase_final_state() {
     done
     echo ""
     echo "${B}Installed tool binaries:${Z}"
-    for bin in ut clipso zsh maid mkit miko ndevs nvim audit-privacy; do
+    for bin in ut clipso zsh maid mkit miko nina nvim audit-privacy; do
         if command -v "$bin" >/dev/null 2>&1; then
             echo "  [OK] $bin"
         else
@@ -406,8 +406,8 @@ ${B}Options:${Z}
 
 ${B}Phases:${Z}
   0. termux base (pkg update/upgrade + git,gh,python,node,nvim,rsync,zsh,curl,wget)
-  1. ut          6. miko-task
-  2. clipso      7. noemap
+  1. ut          6. miko
+  2. clipso      7. nina
   3. zsh-setup   8. nvim-setup
   4. maid-chan   9. audit-privacy
   5. mkit
@@ -438,8 +438,8 @@ main() {
     phase_3_zsh_setup     || EXIT_CODE=1
     phase_4_maid_chan     || EXIT_CODE=1
     phase_5_mkit          || EXIT_CODE=1
-    phase_6_miko_task     || EXIT_CODE=1
-    phase_7_noemap        || EXIT_CODE=1
+    phase_6_miko          || EXIT_CODE=1
+    phase_7_nina          || EXIT_CODE=1
     phase_8_nvim_setup    || EXIT_CODE=1
     phase_9_audit_privacy      || EXIT_CODE=1
     phase_10_termux_companions || EXIT_CODE=1
