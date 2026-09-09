@@ -26,8 +26,8 @@ set -euo pipefail
 readonly SCRIPT_VERSION="2.0.0"
 readonly SCRIPT_NAME="$(basename "$0")"
 
-readonly UT_ROOT="${TOOLS_DIR}/ut"
 readonly TOOLS_DIR="${HOME}/unix-toolkit-tools"
+readonly UT_ROOT="${TOOLS_DIR}/ut"
 readonly LOCAL_BIN="${HOME}/.local/bin"
 readonly LOG_DIR="${HOME}/.local/var/log"
 readonly LOG_FILE="${LOG_DIR}/termux-bootstrap-$(date +%Y%m%d-%H%M%S).log"
