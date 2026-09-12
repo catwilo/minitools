@@ -55,7 +55,6 @@ Small standalone scripts organized by category. No installer needed — copy or 
 | Script | Description |
 |---|---|
 | `lan-connection-lan2lan` | Configure a LAN-to-LAN connection on a given interface |
-| `pty-run` | Run a command in a real PTY with alt-screen + clipso capture; supports pipes and shell operators |
 | `reset-iwd.service.sh` | Atomic idempotent restart of the iwd wireless daemon |
 | `rpi-optimize.sh` | Disable optional Raspberry Pi services to reduce overhead |
 | `run-java.sh` | Compile, run, and clean a single Java source file |
