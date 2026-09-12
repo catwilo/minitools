@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # fehbg — set wallpaper(s) from a directory using feh
-# Usage: fehbg [dir]   default: ~/.local/share/wallpapers
+# Usage: fehbg [dir]   default: ~/.background
 set -euo pipefail
 
-BG_DIR="${1:-${XDG_DATA_HOME:-$HOME/.local/share}/wallpapers}"
+BG_DIR="${1:-$HOME/.background}"
 [[ -d "$BG_DIR" ]] || { echo "Error: dir not found: $BG_DIR"; exit 1; }
 
 mapfile -t imgs < <(find "$BG_DIR" -maxdepth 1 -type f   \( -name "*.jpg" -o -name "*.jpeg" -o -name "*.png" \) | sort)
