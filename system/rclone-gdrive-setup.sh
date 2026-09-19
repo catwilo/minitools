@@ -46,7 +46,9 @@ die()  { err "$*"; exit 1; }
 
 _run() {
     if [[ $DRY_RUN -eq 1 ]]; then
-        info "[DRY-RUN] $*"
+        local _cmd
+        _cmd="$(printf '%s ' "$@")"
+        info "[DRY-RUN] ${_cmd% }"
         return 0
     fi
     "$@"
@@ -101,6 +103,11 @@ asegurar_rclone() {
 
     info "instalando rclone via pkg"
     _run pkg install -y rclone || die "pkg install rclone fallo"
+
+    if [[ $DRY_RUN -eq 1 ]]; then
+        ok "[DRY-RUN] rclone quedaria instalado (se asume exito)"
+        return 0
+    fi
 
     hash -r 2>/dev/null || true
     command -v rclone >/dev/null 2>&1 \
