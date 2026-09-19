@@ -55,6 +55,7 @@ Small standalone scripts organized by category. No installer needed — copy or 
 | Script | Description |
 |---|---|
 | `lan-connection-lan2lan` | Configure a LAN-to-LAN connection on a given interface |
+| `rclone-gdrive-setup.sh` | Guided idempotent setup of Google Drive via rclone in Termux (wizard values + verification) |
 | `reset-iwd.service.sh` | Atomic idempotent restart of the iwd wireless daemon |
 | `rpi-optimize.sh` | Disable optional Raspberry Pi services to reduce overhead |
 | `run-java.sh` | Compile, run, and clean a single Java source file |
