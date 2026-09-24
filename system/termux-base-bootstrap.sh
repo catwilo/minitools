@@ -46,7 +46,7 @@ readonly SCRIPTS_DIR="$BASE_DIR/scripts"
 readonly LOG_FILE="$LOG_DIR/bootstrap-$(date +%Y%m%d-%H%M%S).log"
 readonly LOCK_FILE="$TMP_ROOT/${SCRIPT_NAME}.lock"
 
-readonly PACKAGES=(git curl wget unzip python nodejs-lts rclone)
+readonly PACKAGES=(git curl wget unzip python nodejs-lts rclone rbw pinentry)
 readonly DIRS=("$SCRIPTS_DIR")
 
 WORK_DIR=""          # se crea en main con mktemp
@@ -215,7 +215,7 @@ update_pip() {
 verify_installation() {
     log_info "Verificando instalaciones..."
     local failed=0 cmd
-    for cmd in git curl wget unzip python3 node npm rclone; do
+    for cmd in git curl wget unzip python3 node npm rclone rbw pinentry; do
         if command_exists "$cmd"; then
             log_ok "$(printf '%-8s' "$cmd") $("$cmd" --version 2>&1 | head -n1)"
         else
@@ -231,11 +231,21 @@ print_next_steps() {
 ────────────────────────────────────────────
  Instalación completada · Log: $LOG_FILE
 ────────────────────────────────────────────
- 1) Configurar Google Drive:   rclone config
- 2) Probar acceso:             rclone lsd drive:
- 3) Subir archivo:             rclone copy archivo.zip drive:Backups
- 4) Sincronizar carpeta:       rclone sync ~/storage/shared/Documents drive:Documentos
+
+ rclone (Google Drive):
+ 1) Configurar:               rclone config
+ 2) Probar acceso:            rclone lsd drive:
+ 3) Subir archivo:            rclone copy archivo.zip drive:Backups
+ 4) Sincronizar carpeta:      rclone sync ~/storage/shared/Documents drive:Documentos
     (usa --dry-run primero; sync puede BORRAR archivos en destino)
+
+ rbw (Bitwarden CLI):
+ 1) Configurar servidor:      rbw config set base_url https://vault.bitwarden.com
+ 2) Login:                    rbw login
+ 3) Desbloquear (una vez):    rbw unlock
+ 4) Copiar password al portapapeles de Android:
+                               rbw get --clipboard <item>
+                               rbw get --raw <item> | termux-clipboard-set
 ────────────────────────────────────────────
 EOF
 }
