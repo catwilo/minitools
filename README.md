@@ -61,7 +61,7 @@ Small standalone scripts organized by category. No installer needed — copy or 
 | `run-java.sh` | Compile, run, and clean a single Java source file |
 | `setup-audio-bluetooth-debian.sh` | Idempotent install and enable of PipeWire audio + BlueZ Bluetooth on Debian |
 | `setup-mpd-termux.sh` | Set up MPD (Music Player Daemon) in Termux |
-| `termux-base-bootstrap.sh` | Idempotent bootstrap of the base Termux environment: essential packages, storage access, automation directories, rclone ready for config, and rbw (Bitwarden CLI) with pinentry for clipboard password retrieval |
+| `termux-base-bootstrap.sh` | Idempotent bootstrap of the base Termux environment: essential packages, storage access, automation directories, rclone ready for config, and Bitwarden CLI (bw) via npm for clipboard password retrieval |
 | `win-node-bootstrap.ps1` | One-time bootstrap: OpenSSH Server + Tailscale on a new Windows host node |
 
 ## vm

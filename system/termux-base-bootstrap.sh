@@ -46,7 +46,7 @@ readonly SCRIPTS_DIR="$BASE_DIR/scripts"
 readonly LOG_FILE="$LOG_DIR/bootstrap-$(date +%Y%m%d-%H%M%S).log"
 readonly LOCK_FILE="$TMP_ROOT/${SCRIPT_NAME}.lock"
 
-readonly PACKAGES=(git curl wget unzip python nodejs-lts rclone rbw pinentry)
+readonly PACKAGES=(git curl wget unzip python nodejs-lts rclone)
 readonly DIRS=("$SCRIPTS_DIR")
 
 WORK_DIR=""          # se crea en main con mktemp
@@ -206,6 +206,17 @@ install_packages() {
     retry 3 5 pkg install -y "${missing[@]}"
 }
 
+install_bitwarden_cli() {
+    log_info "Instalando Bitwarden CLI oficial (bw)..."
+    if command_exists bw; then
+        log_ok "bw ya instalado ($(bw --version 2>&1 | head -n1))"
+        return 0
+    fi
+    retry 3 5 npm install -g @bitwarden/cli
+    command_exists bw || { log_error "bw no quedo en PATH tras npm install"; return 1; }
+    log_ok "bw instalado ($(bw --version 2>&1 | head -n1))"
+}
+
 update_pip() {
     log_info "Actualizando pip..."
     python3 -m pip install --upgrade --no-input --cache-dir "$WORK_DIR/pip-cache" pip \
@@ -215,7 +226,7 @@ update_pip() {
 verify_installation() {
     log_info "Verificando instalaciones..."
     local failed=0 cmd
-    for cmd in git curl wget unzip python3 node npm rclone rbw pinentry; do
+    for cmd in git curl wget unzip python3 node npm rclone bw; do
         if command_exists "$cmd"; then
             log_ok "$(printf '%-8s' "$cmd") $("$cmd" --version 2>&1 | head -n1)"
         else
@@ -239,13 +250,16 @@ print_next_steps() {
  4) Sincronizar carpeta:      rclone sync ~/storage/shared/Documents drive:Documentos
     (usa --dry-run primero; sync puede BORRAR archivos en destino)
 
- rbw (Bitwarden CLI):
- 1) Configurar servidor:      rbw config set base_url https://vault.bitwarden.com
- 2) Login:                    rbw login
- 3) Desbloquear (una vez):    rbw unlock
- 4) Copiar password al portapapeles de Android:
-                               rbw get --clipboard <item>
-                               rbw get --raw <item> | termux-clipboard-set
+ Bitwarden CLI (bw):
+ 1) Login (pide master password y 2FA en la misma terminal):
+                               bw login
+ 2) Desbloquear la sesion:
+                               export BW_SESSION=$(bw unlock --raw)
+ 3) Copiar password al portapapeles de Android:
+                               bw get password <item> | termux-clipboard-set
+                               bw get totp <item> | termux-clipboard-set
+ 4) Cerrar sesion:
+                               bw lock
 ────────────────────────────────────────────
 EOF
 }
@@ -265,6 +279,7 @@ main() {
     update_system
     setup_storage
     install_packages
+    install_bitwarden_cli
     update_pip
     setup_dirs
     verify_installation
