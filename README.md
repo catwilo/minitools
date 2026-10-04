@@ -55,13 +55,10 @@ Small standalone scripts organized by category. No installer needed — copy or 
 | Script | Description |
 |---|---|
 | `lan-connection-lan2lan` | Configure a LAN-to-LAN connection on a given interface |
-| `rclone-gdrive-setup.sh` | Guided idempotent setup of Google Drive via rclone in Termux (wizard values + verification) |
 | `reset-iwd.service.sh` | Atomic idempotent restart of the iwd wireless daemon |
 | `rpi-optimize.sh` | Disable optional Raspberry Pi services to reduce overhead |
 | `run-java.sh` | Compile, run, and clean a single Java source file |
 | `setup-audio-bluetooth-debian.sh` | Idempotent install and enable of PipeWire audio + BlueZ Bluetooth on Debian |
-| `setup-mpd-termux.sh` | Set up MPD (Music Player Daemon) in Termux |
-| `termux-base-bootstrap.sh` | Idempotent bootstrap of the base Termux environment: essential packages, storage access, automation directories, rclone ready for config, and Bitwarden CLI (bw) via npm for clipboard password retrieval |
 | `win-node-bootstrap.ps1` | One-time bootstrap: OpenSSH Server + Tailscale on a new Windows host node |
 
 ## vm
